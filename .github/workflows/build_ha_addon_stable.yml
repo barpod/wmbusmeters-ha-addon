@@ -2,6 +2,11 @@ name: Build HA addon stable
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Add on version'
+        required: true
+        type: string
 
 concurrency:
   group: ha-addon-build
@@ -13,19 +18,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
-        with:
-          token: '${{ secrets.HA_PAT }}'
 
       - name: Update README and set version in config.json
         run: |
           rsync -a --delete wmbusmeters-ha-addon-edge/ wmbusmeters-ha-addon/ --exclude CHANGELOG.md
           sed -i 's/\[edge\] //g; s/-edge//g' wmbusmeters-ha-addon/config.json
-          sed -i "s|\s\{4,\}\"version\".*|    \"version\": \"${{ github.event.client_payload.ver }}\"\,|g" wmbusmeters-ha-addon/config.json
-          sed -i "1s|^|## ${{ github.event.client_payload.ver }} \n- Updated to version [${{ github.event.client_payload.ver }}](https://github.com/wmbusmeters/wmbusmeters/blob/master/CHANGES)\n|" wmbusmeters-ha-addon/CHANGELOG.md
+          sed -i "s|\s\{4,\}\"version\".*|    \"version\": \"${{ inputs.version }}\"\,|g" wmbusmeters-ha-addon/config.json
+          sed -i "1s|^|## ${{ inputs.version }} \n- Updated to version [${{ inputs.version }}](https://github.com/wmbusmeters/wmbusmeters/blob/master/CHANGES)\n|" wmbusmeters-ha-addon/CHANGELOG.md
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ha-addon_artifact-${{ github.event.client_payload.ver }}
+          name: ha-addon_artifact-${{ inputs.version }}
           path: ${{ github.workspace }}
           retention-days: 1
 
@@ -54,7 +57,7 @@ jobs:
           args: |
             --${{ matrix.arch }} \
             --target wmbusmeters-ha-addon \
-            --version ${{ github.event.client_payload.ver }}
+            --version ${{ inputs.version }}
 
   update-repo:
     needs: [prepare, build]
@@ -62,10 +65,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: ha-addon_artifact-${{ github.event.client_payload.ver }}
+          name: ha-addon_artifact-${{ inputs.version }}
 
       - name: Push changed files back to repo
         uses: EndBug/add-and-commit@v9
         with:
           default_author: github_actions
-          message: "Auto Push - update ha-addon config and changelog for ${{ github.event.client_payload.ver }} - [no ci]"
+          message: "Auto Push - update ha-addon config and changelog for ${{ inputs.version }} - [no ci]"
