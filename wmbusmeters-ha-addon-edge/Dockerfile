@@ -14,6 +14,8 @@ RUN make
 WORKDIR /rtl-wmbus
 RUN make release && chmod 755 build/rtl_wmbus
 WORKDIR /rtl_433
+ARG rtl433GitRevision=22.11
+RUN git checkout ${rtl433GitRevision}
 RUN mkdir build && cd build && cmake ../ && make
 
 FROM $BUILD_FROM AS scratch
